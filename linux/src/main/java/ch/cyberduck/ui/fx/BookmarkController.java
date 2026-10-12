@@ -25,6 +25,7 @@ import ch.cyberduck.core.PasswordStoreFactory;
 import ch.cyberduck.core.ProtocolFactory;
 import ch.cyberduck.core.UUIDRandomStringService;
 import ch.cyberduck.core.preferences.PreferencesFactory;
+import ch.cyberduck.core.resources.IconCacheFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -41,6 +42,8 @@ import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
@@ -50,6 +53,8 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -360,10 +365,26 @@ public class BookmarkController {
         private final Label name = new Label();
         private final Label url = new Label();
         private final VBox box = new VBox(2, name, url);
+        private final HBox row = new HBox(8);
 
         private BookmarkCell() {
             name.setStyle("-fx-font-weight: bold;");
             url.setStyle("-fx-text-fill: gray;");
+            row.setAlignment(Pos.CENTER_LEFT);
+        }
+
+        private static Node icon(final Host bookmark) {
+            final Image image = IconCacheFactory.<Image>get().volumeIcon(bookmark.getProtocol(), 32);
+            if(null == image) {
+                return Icons.server();
+            }
+            final ImageView view = new ImageView(image);
+            view.setFitWidth(32);
+            view.setFitHeight(32);
+            view.setPreserveRatio(true);
+            view.setSmooth(true);
+            view.setMouseTransparent(true);
+            return view;
         }
 
         @Override
@@ -376,7 +397,8 @@ public class BookmarkController {
             name.setText(BookmarkNameProvider.toString(item));
             final String user = StringUtils.isNotBlank(item.getCredentials().getUsername()) ? String.format("%s@", item.getCredentials().getUsername()) : StringUtils.EMPTY;
             url.setText(String.format("%s://%s%s", item.getProtocol().getScheme().name(), user, item.getHostname()));
-            setGraphic(box);
+            row.getChildren().setAll(icon(item), box);
+            setGraphic(row);
         }
     }
 }

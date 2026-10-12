@@ -52,6 +52,27 @@
                 <maven.test.skip>false</maven.test.skip>
             </properties>
             <build>
+                <resources>
+                    <resource>
+                        <directory>src/main/resources</directory>
+                    </resource>
+                    <resource>
+                        <!-- Icons of the protocols, shown next to the bookmarks -->
+                        <directory>${main.basedir}/img</directory>
+                        <targetPath>img</targetPath>
+                        <includes>
+                            <include>azure.png</include>
+                            <include>box.png</include>
+                            <include>dropbox.png</include>
+                            <include>ftp.png</include>
+                            <include>googledrive.png</include>
+                            <include>googlestorage.png</include>
+                            <include>onedrive.png</include>
+                            <include>s3.png</include>
+                            <include>swift.png</include>
+                        </includes>
+                    </resource>
+                </resources>
                 <plugins>
                     <plugin>
                         <!-- JavaFX is compiled for a newer Java than the reactor allows. Only the JavaFX artifacts are exempt. -->

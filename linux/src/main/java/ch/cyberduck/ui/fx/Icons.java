@@ -97,6 +97,13 @@ public final class Icons {
     }
 
     /**
+     * A server, for bookmarks of a protocol without an image
+     */
+    public static Node server() {
+        return shape("M0 0 L16 0 L16 6 L0 6 Z M0 8 L16 8 L16 14 L0 14 Z", 16, 14, "#9aa3ad");
+    }
+
+    /**
      * A folder
      */
     public static Node folder() {
