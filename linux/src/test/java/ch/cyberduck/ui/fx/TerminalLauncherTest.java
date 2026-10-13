@@ -18,6 +18,7 @@ package ch.cyberduck.ui.fx;
 import ch.cyberduck.core.Host;
 import ch.cyberduck.core.LocalFactory;
 import ch.cyberduck.core.Path;
+import ch.cyberduck.core.exception.AccessDeniedException;
 import ch.cyberduck.core.nio.LocalProtocol;
 import ch.cyberduck.core.preferences.PreferencesFactory;
 import ch.cyberduck.core.sftp.SFTPProtocol;
@@ -32,7 +33,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 import static org.junit.Assert.assertTrue;
 
 public class TerminalLauncherTest {
@@ -57,7 +58,7 @@ public class TerminalLauncherTest {
         final java.io.File log = temporary.newFile();
         final java.io.File terminal = script("echo \"$@\" > " + log.getAbsolutePath());
         PreferencesFactory.get().setProperty(TerminalLauncher.PROPERTY, terminal.getAbsolutePath());
-        assertNull(TerminalLauncher.open(host(), folder));
+        new TerminalLauncher().open(host(), folder);
         final long deadline = System.currentTimeMillis() + 5000;
         while(log.length() == 0 && System.currentTimeMillis() < deadline) {
             Thread.sleep(50);
@@ -70,15 +71,25 @@ public class TerminalLauncherTest {
     public void testTerminalThatFailsSaysWhy() throws Exception {
         final java.io.File terminal = script("echo 'Unknown option -t' >&2; exit 2");
         PreferencesFactory.get().setProperty(TerminalLauncher.PROPERTY, terminal.getAbsolutePath());
-        final String failure = TerminalLauncher.open(host(), folder);
-        assertTrue(failure, failure.contains("did not start") && failure.contains("Unknown option -t"));
+        try {
+            new TerminalLauncher().open(host(), folder);
+            fail();
+        }
+        catch(AccessDeniedException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("did not start") && e.getMessage().contains("Unknown option -t"));
+        }
     }
 
     @Test
     public void testTerminalThatIsMissingSaysWhy() {
         PreferencesFactory.get().setProperty(TerminalLauncher.PROPERTY, "/nonexistent/terminal");
-        final String failure = TerminalLauncher.open(host(), folder);
-        assertTrue(failure, failure.contains("did not start"));
+        try {
+            new TerminalLauncher().open(host(), folder);
+            fail();
+        }
+        catch(AccessDeniedException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("did not start"));
+        }
     }
 
     private final Path folder = new Path("/home/o'brien/data", EnumSet.of(Path.Type.directory));
@@ -111,7 +122,7 @@ public class TerminalLauncherTest {
         PreferencesFactory.get().setProperty(TerminalLauncher.PROPERTY, terminal.getAbsolutePath());
         final java.io.File directory = temporary.newFolder("o'brien");
         final Host local = new Host(new LocalProtocol(), new LocalProtocol().getDefaultHostname());
-        assertNull(TerminalLauncher.open(local, new Path(directory.getAbsolutePath(), EnumSet.of(Path.Type.directory))));
+        new TerminalLauncher().open(local, new Path(directory.getAbsolutePath(), EnumSet.of(Path.Type.directory)));
         final long deadline = System.currentTimeMillis() + 5000;
         while(log.length() == 0 && System.currentTimeMillis() < deadline) {
             Thread.sleep(50);
@@ -124,8 +135,13 @@ public class TerminalLauncherTest {
     public void testLocalFolderThatIsGoneSaysWhy() {
         PreferencesFactory.get().setProperty(TerminalLauncher.PROPERTY, "/bin/sh");
         final Host local = new Host(new LocalProtocol(), new LocalProtocol().getDefaultHostname());
-        final String failure = TerminalLauncher.open(local, new Path("/nonexistent/folder", EnumSet.of(Path.Type.directory)));
-        assertTrue(failure, failure.contains("did not start"));
+        try {
+            new TerminalLauncher().open(local, new Path("/nonexistent/folder", EnumSet.of(Path.Type.directory)));
+            fail();
+        }
+        catch(AccessDeniedException e) {
+            assertTrue(e.getMessage(), e.getMessage().contains("did not start"));
+        }
     }
 
     @Test
