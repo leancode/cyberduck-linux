@@ -58,6 +58,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 
@@ -373,18 +374,27 @@ public class BookmarkController {
             row.setAlignment(Pos.CENTER_LEFT);
         }
 
+        /**
+         * @return Icon of the protocol in a box of 32 by 32, so that the names line up whether there is an image or not
+         */
         private static Node icon(final Host bookmark) {
+            final StackPane box = new StackPane();
+            box.setMinSize(32, 32);
+            box.setPrefSize(32, 32);
+            box.setMaxSize(32, 32);
+            box.setMouseTransparent(true);
             final Image image = IconCacheFactory.<Image>get().volumeIcon(bookmark.getProtocol(), 32);
             if(null == image) {
-                return Icons.server();
+                box.getChildren().add(Icons.server());
+                return box;
             }
             final ImageView view = new ImageView(image);
             view.setFitWidth(32);
             view.setFitHeight(32);
             view.setPreserveRatio(true);
             view.setSmooth(true);
-            view.setMouseTransparent(true);
-            return view;
+            box.getChildren().add(view);
+            return box;
         }
 
         @Override

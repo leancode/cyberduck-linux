@@ -68,7 +68,12 @@ public class FxIconCache implements IconCache<Image> {
                         log.debug("No icon {} for {}", resource, name);
                         return null;
                     }
-                    return new Image(in, w, h, true, true);
+                    final Image image = new Image(in, w, h, true, true);
+                    if(image.isError()) {
+                        log.warn("Failure reading icon {}", resource, image.getException());
+                        return null;
+                    }
+                    return image;
                 }
             }
             try(InputStream in = new ByteArrayInputStream(Base64.getMimeDecoder().decode(name))) {
