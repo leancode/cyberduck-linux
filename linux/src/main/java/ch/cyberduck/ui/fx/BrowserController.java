@@ -1546,7 +1546,7 @@ public class BrowserController extends FxController {
             TerminalServiceFactory.get().open(pool.getHost(), folder);
         }
         catch(AccessDeniedException e) {
-            dialogs.error(Messages.get("Open in Terminal"), e.getMessage());
+            dialogs.error(Messages.get("Open in Terminal"), e.getDetail(false));
         }
     }
 

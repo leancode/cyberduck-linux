@@ -75,7 +75,7 @@ public class TerminalLauncherTest {
             fail();
         }
         catch(AccessDeniedException e) {
-            assertTrue(e.getMessage(), e.getMessage().contains("did not start") && e.getMessage().contains("Unknown option -t"));
+            assertTrue(e.getDetail(false), e.getDetail(false).contains("did not start") && e.getDetail(false).contains("Unknown option -t"));
         }
     }
 
@@ -87,7 +87,7 @@ public class TerminalLauncherTest {
             fail();
         }
         catch(AccessDeniedException e) {
-            assertTrue(e.getMessage(), e.getMessage().contains("did not start"));
+            assertTrue(e.getDetail(false), e.getDetail(false).contains("did not start"));
         }
     }
 
