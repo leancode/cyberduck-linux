@@ -100,6 +100,12 @@ public class ConnectionDialogTest {
             }
 
             @Override
+            public String getIdentifier() {
+                // Otherwise it is equal to the registered FTP protocol, and the list selects that one instead
+                return "googledrive";
+            }
+
+            @Override
             public boolean isUsernameConfigurable() {
                 return false;
             }
