@@ -24,53 +24,53 @@ import ch.cyberduck.core.Host;
 import ch.cyberduck.core.ListProgressListener;
 import ch.cyberduck.core.Local;
 import ch.cyberduck.core.LocalFactory;
+import ch.cyberduck.core.LoginCallbackFactory;
 import ch.cyberduck.core.NullFilter;
+import ch.cyberduck.core.PasswordCallbackFactory;
 import ch.cyberduck.core.Path;
 import ch.cyberduck.core.PathCache;
-import ch.cyberduck.core.LoginCallbackFactory;
 import ch.cyberduck.core.Permission;
 import ch.cyberduck.core.Protocol;
 import ch.cyberduck.core.ProtocolFactory;
 import ch.cyberduck.core.SessionPoolFactory;
 import ch.cyberduck.core.TerminalServiceFactory;
 import ch.cyberduck.core.UserDateFormatterFactory;
+import ch.cyberduck.core.editor.DefaultEditorListener;
+import ch.cyberduck.core.editor.Editor;
+import ch.cyberduck.core.editor.EditorFactory;
+import ch.cyberduck.core.exception.AccessDeniedException;
+import ch.cyberduck.core.exception.HostParserException;
+import ch.cyberduck.core.features.Location;
+import ch.cyberduck.core.features.Vault;
 import ch.cyberduck.core.formatter.SizeFormatterFactory;
-import ch.cyberduck.core.pool.SessionPool;
+import ch.cyberduck.core.local.Application;
 import ch.cyberduck.core.local.ApplicationFinderFactory;
 import ch.cyberduck.core.local.BrowserLauncherFactory;
-import ch.cyberduck.core.local.Application;
-import ch.cyberduck.core.editor.EditorFactory;
-import ch.cyberduck.core.editor.Editor;
-import ch.cyberduck.core.editor.DefaultEditorListener;
-import ch.cyberduck.core.worker.LockVaultWorker;
-import ch.cyberduck.core.worker.LoadVaultWorker;
-import ch.cyberduck.core.worker.CreateVaultWorker;
-import ch.cyberduck.core.vault.VaultVersion;
-import ch.cyberduck.core.vault.VaultCredentials;
-import ch.cyberduck.core.vault.RegistryVaultLoader;
-import ch.cyberduck.core.features.Vault;
-import ch.cyberduck.core.PasswordCallbackFactory;
+import ch.cyberduck.core.pool.SessionPool;
 import ch.cyberduck.core.preferences.Preferences;
 import ch.cyberduck.core.preferences.PreferencesFactory;
-import ch.cyberduck.core.threading.DisconnectBackgroundAction;
 import ch.cyberduck.core.threading.DefaultMainAction;
+import ch.cyberduck.core.threading.DisconnectBackgroundAction;
 import ch.cyberduck.core.threading.WorkerBackgroundAction;
 import ch.cyberduck.core.transfer.DownloadTransfer;
+import ch.cyberduck.core.transfer.SyncTransfer;
 import ch.cyberduck.core.transfer.Transfer;
 import ch.cyberduck.core.transfer.TransferItem;
 import ch.cyberduck.core.transfer.TransferOptions;
 import ch.cyberduck.core.transfer.UploadTransfer;
-import ch.cyberduck.core.exception.AccessDeniedException;
-import ch.cyberduck.core.exception.HostParserException;
-import ch.cyberduck.core.features.Location;
+import ch.cyberduck.core.vault.RegistryVaultLoader;
+import ch.cyberduck.core.vault.VaultCredentials;
+import ch.cyberduck.core.vault.VaultVersion;
+import ch.cyberduck.core.worker.CopyWorker;
 import ch.cyberduck.core.worker.CreateDirectoryWorker;
+import ch.cyberduck.core.worker.CreateVaultWorker;
 import ch.cyberduck.core.worker.DeleteWorker;
 import ch.cyberduck.core.worker.ListWorker;
-import ch.cyberduck.core.worker.CopyWorker;
-import ch.cyberduck.core.worker.TouchWorker;
-import ch.cyberduck.core.transfer.SyncTransfer;
-import ch.cyberduck.core.worker.MoveWorker;
+import ch.cyberduck.core.worker.LoadVaultWorker;
+import ch.cyberduck.core.worker.LockVaultWorker;
 import ch.cyberduck.core.worker.MountWorker;
+import ch.cyberduck.core.worker.MoveWorker;
+import ch.cyberduck.core.worker.TouchWorker;
 import ch.cyberduck.ui.browser.DefaultBrowserFilter;
 import ch.cyberduck.ui.browser.DownloadDirectoryFinder;
 import ch.cyberduck.ui.browser.UploadDirectoryFinder;
@@ -1542,12 +1542,18 @@ public class BrowserController extends FxController {
         }
         final Path selected = table.getSelectionModel().getSelectedItem();
         final Path folder = null != selected && selected.isDirectory() ? selected : workdir;
-        try {
-            TerminalServiceFactory.get().open(pool.getHost(), folder);
-        }
-        catch(AccessDeniedException e) {
-            dialogs.error(Messages.get("Open in Terminal"), e.getDetail(false));
-        }
+        final Host host = pool.getHost();
+        // Waits up to two seconds to see whether the terminal started, which must not hold the window
+        final Thread thread = new Thread(() -> {
+            try {
+                TerminalServiceFactory.get().open(host, folder);
+            }
+            catch(AccessDeniedException e) {
+                dialogs.error(Messages.get("Open in Terminal"), e.getDetail(false));
+            }
+        }, "terminal-start");
+        thread.setDaemon(true);
+        thread.start();
     }
 
     /**
