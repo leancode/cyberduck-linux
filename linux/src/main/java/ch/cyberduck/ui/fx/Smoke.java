@@ -1878,9 +1878,8 @@ public final class Smoke {
     }
 
     /**
-     * An FTP bookmark that transfers the files as ASCII or binary by their type. A text file and a binary file both have
-     * line feeds. The server must have the text file with carriage returns and line feeds and the other one as it was.
-     * Then the text file is downloaded again, as it is on the server.
+     * An FTP bookmark with a character set and the passive mode. A text file and a binary file both have line feeds.
+     * Both must reach the server byte for byte, and the text file is downloaded again as it is.
      *
      * @param workdir Folder on this computer with text.txt and data.bin
      */
@@ -1903,17 +1902,15 @@ public final class Smoke {
             dialog.getPortField().setText(port);
             dialog.getUsernameField().setText(user);
             check("the anonymous option is offered for FTP", dialog.getAnonymousBox().isVisible());
-            check("so are the options of FTP", dialog.getMore().isVisible() && dialog.getTransferModeBox().isVisible() && dialog.getConnectModeBox().isVisible());
+            check("so are the options of FTP", dialog.getMore().isVisible() && dialog.getConnectModeBox().isVisible());
             dialog.getEncodingBox().setValue("ISO-8859-1");
             dialog.getConnectModeBox().setValue(ch.cyberduck.core.ftp.FTPConnectMode.passive);
-            dialog.getTransferModeBox().setValue(dialog.getTransferModeBox().getItems().stream().filter(c -> "auto".equals(c.getValue())).findFirst().orElseThrow());
             dialog.getConnectButton().fire();
             return null;
         });
         await("bookmark saved", () -> onFx(() -> 1 == bookmarks.getList().getItems().size()));
         final Host bookmark = onFx(() -> bookmarks.getList().getItems().get(0));
-        check("the transfer mode is kept in the bookmark", "auto".equals(bookmark.getProperty(ch.cyberduck.core.ftp.FTPFileType.MODE)));
-        check("so are the character set and the connect mode", "ISO-8859-1".equals(bookmark.getEncoding()) && ch.cyberduck.core.ftp.FTPConnectMode.passive == bookmark.getFTPConnectMode());
+        check("the character set and the connect mode", "ISO-8859-1".equals(bookmark.getEncoding()) && ch.cyberduck.core.ftp.FTPConnectMode.passive == bookmark.getFTPConnectMode());
 
         onFx(() -> {
             bookmarks.getList().getSelectionModel().select(bookmark);
@@ -1938,7 +1935,7 @@ public final class Smoke {
         awaitAnswering("upload", password, counts, () -> transfers.getCompleted() >= completed + 1);
         awaitAnswering("uploaded files shown", password, counts, () -> names(browser).containsAll(List.of("text.txt", "data.bin")));
 
-        // Downloads stay binary: the carriage returns that the server has are still there, and the transfer is complete
+        // The file comes back as it was sent
         final java.nio.file.Path down = java.nio.file.Files.createDirectories(work.resolve("down"));
         PreferencesFactory.get().setProperty("queue.download.folder", down.toString());
         select(browser, "text.txt");
@@ -1947,7 +1944,7 @@ public final class Smoke {
             return null;
         });
         awaitAnswering("download", password, counts, () -> transfers.getCompleted() >= completed + 2);
-        check("the text file has the line breaks of the server", "line one\r\nline two\r\n".equals(new String(java.nio.file.Files.readAllBytes(down.resolve("text.txt")), java.nio.charset.StandardCharsets.UTF_8)));
+        check("the text file has the line breaks it was sent with", "line one\nline two\n".equals(new String(java.nio.file.Files.readAllBytes(down.resolve("text.txt")), java.nio.charset.StandardCharsets.UTF_8)));
         return "SMOKE OK ftp uploaded=2";
     }
 

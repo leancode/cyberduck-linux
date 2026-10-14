@@ -228,18 +228,12 @@ public class PreferencesControllerTest {
         onFx(() -> {
             window.build();
             assertEquals("UTF-8", window.getEncoding().getValue());
-            assertEquals("binary", window.getFtpTransferMode().getValue().getValue());
             window.getEncoding().setValue("windows-1252");
-            window.getFtpTransferMode().setValue(window.getFtpTransferMode().getItems().stream().filter(c -> "auto".equals(c.getValue())).findFirst().orElseThrow());
-            window.getAsciiExtensions().setText("txt, php");
-            window.getAsciiExtensions().fireEvent(new javafx.event.ActionEvent());
             return null;
         });
         final LinuxApplicationPreferences next = new LinuxApplicationPreferences(this.file());
         next.setDefaults();
         next.load();
         assertEquals("windows-1252", next.getProperty("browser.charset.encoding"));
-        assertEquals("auto", next.getProperty("ftp.transfer.mode"));
-        assertEquals("txt, php", next.getProperty("ftp.transfer.ascii.extensions"));
     }
 }

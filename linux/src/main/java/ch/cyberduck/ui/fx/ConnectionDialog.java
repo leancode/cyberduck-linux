@@ -18,7 +18,6 @@ package ch.cyberduck.ui.fx;
 import ch.cyberduck.core.Host;
 import ch.cyberduck.core.Protocol;
 import ch.cyberduck.core.ProtocolFactory;
-import ch.cyberduck.core.ftp.FTPFileType;
 import ch.cyberduck.core.ftp.FTPConnectMode;
 import ch.cyberduck.core.preferences.PreferencesFactory;
 import ch.cyberduck.core.exception.HostParserException;
@@ -79,10 +78,8 @@ public class ConnectionDialog extends Dialog<Host> {
         "GBK", "GB18030", "Big5", "EUC-KR", "KOI8-R", "UTF-16");
     private final ComboBox<String> encoding = new ComboBox<>();
     private final ComboBox<FTPConnectMode> connectMode = new ComboBox<>();
-    private final ComboBox<PreferencesController.Choice> transferMode = new ComboBox<>();
     private final Label encodingLabel = new Label(Messages.get("Encoding"));
     private final Label connectModeLabel = new Label(Messages.get("Connect Mode"));
-    private final Label transferModeLabel = new Label(Messages.get("Transfer Mode"));
     private final TitledPane more = new TitledPane();
     private final Label error = new Label();
     private final Label note = new Label();
@@ -128,8 +125,7 @@ public class ConnectionDialog extends Dialog<Host> {
                 HostBuilder.identity(host, privateKey.getText());
                 // Stored in the keyring once the login worked
                 host.getCredentials().setSaved(!bookmark && savePassword.isSelected() && StringUtils.isNotEmpty(password.getText()));
-                HostBuilder.options(host, anonymous.isSelected(), encoding.getValue(), connectMode.getValue(),
-                    null == transferMode.getValue() ? null : transferMode.getValue().getValue());
+                HostBuilder.options(host, anonymous.isSelected(), encoding.getValue(), connectMode.getValue());
                 if(bookmark) {
                     host.setNickname(StringUtils.trimToNull(nickname.getText()));
                 }
@@ -156,12 +152,6 @@ public class ConnectionDialog extends Dialog<Host> {
         encoding.setValue("");
         connectMode.getItems().setAll(FTPConnectMode.values());
         connectMode.setValue(FTPConnectMode.unknown);
-        transferMode.getItems().setAll(
-            new PreferencesController.Choice("", String.format("%s (%s)", Messages.get("Default"), StringUtils.defaultIfBlank(PreferencesFactory.get().getProperty(FTPFileType.MODE), FTPFileType.BINARY))),
-            new PreferencesController.Choice(FTPFileType.BINARY, Messages.get("Binary")),
-            new PreferencesController.Choice(FTPFileType.ASCII, Messages.get("ASCII")),
-            new PreferencesController.Choice(FTPFileType.AUTO, Messages.get("Auto (by file type)")));
-        transferMode.setValue(transferMode.getItems().get(0));
         anonymous.selectedProperty().addListener((observable, previous, selected) -> {
             username.setDisable(selected || !protocol.getValue().isUsernameConfigurable());
             password.setDisable(selected || !protocol.getValue().isPasswordConfigurable());
@@ -201,9 +191,6 @@ public class ConnectionDialog extends Dialog<Host> {
         encoding.setValue(null == charset || charset.equals(PreferencesFactory.get().getProperty("browser.charset.encoding")) ? "" : charset);
         if(initial.getProtocol().getType() == Protocol.Type.ftp) {
             connectMode.setValue(initial.getFTPConnectMode());
-            final String mode = initial.getProperty(FTPFileType.MODE);
-            transferMode.setValue(transferMode.getItems().stream().filter(c -> c.getValue().equals(StringUtils.defaultString(mode))).findFirst()
-                .orElse(transferMode.getItems().get(0)));
         }
     }
 
@@ -257,10 +244,8 @@ public class ConnectionDialog extends Dialog<Host> {
         options.setPadding(new Insets(8));
         options.addRow(0, encodingLabel, encoding);
         options.addRow(1, connectModeLabel, connectMode);
-        options.addRow(2, transferModeLabel, transferMode);
         encoding.setMaxWidth(Double.MAX_VALUE);
         connectMode.setMaxWidth(Double.MAX_VALUE);
-        transferMode.setMaxWidth(Double.MAX_VALUE);
         GridPane.setHgrow(encoding, Priority.ALWAYS);
         more.setText(Messages.get("More Options"));
         more.setContent(options);
@@ -314,7 +299,7 @@ public class ConnectionDialog extends Dialog<Host> {
             node.setVisible(selected.isEncodingConfigurable());
             node.setManaged(selected.isEncodingConfigurable());
         }
-        for(javafx.scene.Node node : List.of(connectModeLabel, connectMode, transferModeLabel, transferMode)) {
+        for(javafx.scene.Node node : List.of(connectModeLabel, connectMode)) {
             node.setVisible(ftp);
             node.setManaged(ftp);
         }
@@ -335,9 +320,6 @@ public class ConnectionDialog extends Dialog<Host> {
         return connectMode;
     }
 
-    ComboBox<PreferencesController.Choice> getTransferModeBox() {
-        return transferMode;
-    }
 
     TitledPane getMore() {
         return more;

@@ -228,7 +228,7 @@ if docker info >/dev/null 2>&1; then
     else
         echo "skip sshkey (ssh-keygen is not installed)"
     fi
-    # FTP with a bookmark that sends text as ASCII and the rest as binary. The data connection of the server is on fixed
+    # FTP with a bookmark that has a character set and the passive mode. Files are sent as they are. The data connection of the server is on fixed
     # ports, because the server tells them to the client.
     ftp_image="${CYBERDUCK_SMOKE_FTP_IMAGE:-delfer/alpine-ftp-server}"
     if ftp_container="$(docker run -d --rm -p 127.0.0.1:2121:21 -p 127.0.0.1:21000-21010:21000-21010 -e ADDRESS=127.0.0.1 -e USERS="foo|pass|/ftp/foo" "$ftp_image" 2>/dev/null)"; then
@@ -241,8 +241,8 @@ if docker info >/dev/null 2>&1; then
         printf 'line one\nline two\n' > "$work/ftp/text.txt"
         printf 'bin one\nbin two\n' > "$work/ftp/data.bin"
         HOME="$work/home-ftp" smoke '^SMOKE OK ftp uploaded=2$' ftp 127.0.0.1 2121 foo pass "$work/ftp"
-        # 18 bytes with line feeds became 20 bytes with carriage returns, and the binary file is as it was
-        [ "$(docker exec "$ftp_container" stat -c %s /ftp/foo/text.txt)" = 20 ] || fail "ftp: the text file was not sent as ASCII"
+        # Both files are as they were, with line feeds only
+        [ "$(docker exec "$ftp_container" stat -c %s /ftp/foo/text.txt)" = 18 ] || fail "ftp: the text file was changed"
         [ "$(docker exec "$ftp_container" stat -c %s /ftp/foo/data.bin)" = 16 ] || fail "ftp: the binary file was changed"
     else
         echo "skip ftp (could not start $ftp_image)"

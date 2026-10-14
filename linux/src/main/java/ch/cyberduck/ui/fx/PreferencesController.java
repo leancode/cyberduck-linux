@@ -18,7 +18,6 @@ package ch.cyberduck.ui.fx;
 import ch.cyberduck.core.Host;
 import ch.cyberduck.core.Protocol;
 import ch.cyberduck.core.ProtocolFactory;
-import ch.cyberduck.core.ftp.FTPFileType;
 import ch.cyberduck.core.local.ApplicationFinder;
 import ch.cyberduck.core.local.ApplicationFinderFactory;
 import ch.cyberduck.core.local.RevealServiceFactory;
@@ -459,11 +458,9 @@ public final class PreferencesController {
     }
 
     private final ComboBox<String> encoding = new ComboBox<>();
-    private final ComboBox<Choice> ftpTransferMode = new ComboBox<>();
-    private final TextField asciiExtensions = new TextField();
 
     /**
-     * Character set of file names and the type of the transfer, for the bookmarks that do not set their own
+     * Character set of file names, for the bookmarks that do not set their own
      */
     private Parent ftp() {
         final GridPane grid = this.grid();
@@ -478,26 +475,6 @@ public final class PreferencesController {
             }
         });
         grid.addRow(0, new Label(Messages.get("Default Character Set")), encoding);
-        this.choose(ftpTransferMode, List.of(
-            new Choice(FTPFileType.BINARY, Messages.get("Binary")),
-            new Choice(FTPFileType.ASCII, Messages.get("ASCII")),
-            new Choice(FTPFileType.AUTO, Messages.get("Auto (by file type)"))), FTPFileType.MODE, FTPFileType.BINARY);
-        grid.addRow(1, new Label(Messages.get("Transfer Mode")), ftpTransferMode);
-        asciiExtensions.setText(StringUtils.defaultIfBlank(preferences.getProperty(FTPFileType.EXTENSIONS), FTPFileType.DEFAULT_EXTENSIONS));
-        asciiExtensions.setPrefColumnCount(30);
-        final Runnable saveExtensions = () -> this.save(FTPFileType.EXTENSIONS, asciiExtensions.getText().trim());
-        asciiExtensions.setOnAction(event -> saveExtensions.run());
-        asciiExtensions.focusedProperty().addListener((observable, was, focused) -> {
-            if(!focused) {
-                saveExtensions.run();
-            }
-        });
-        grid.addRow(2, new Label(Messages.get("ASCII File Types")), asciiExtensions);
-        final Label note = new Label(Messages.get("ASCII changes the line breaks of a file and with that its size. Binary keeps every byte. Applies to uploads, downloads are always binary. A bookmark can use another mode."));
-        note.setWrapText(true);
-        note.setMaxWidth(440);
-        grid.add(note, 1, 3);
-        GridPane.setHgrow(asciiExtensions, Priority.ALWAYS);
         return grid;
     }
 
@@ -513,16 +490,8 @@ public final class PreferencesController {
         return grid;
     }
 
-    ComboBox<Choice> getFtpTransferMode() {
-        return ftpTransferMode;
-    }
-
     ComboBox<String> getEncoding() {
         return encoding;
-    }
-
-    TextField getAsciiExtensions() {
-        return asciiExtensions;
     }
 
     ApplicationPicker getDefaultEditor() {

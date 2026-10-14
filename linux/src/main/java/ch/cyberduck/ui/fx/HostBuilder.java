@@ -24,7 +24,6 @@ import ch.cyberduck.core.Protocol;
 import ch.cyberduck.core.ProtocolFactory;
 import ch.cyberduck.core.exception.HostParserException;
 import ch.cyberduck.core.ftp.FTPConnectMode;
-import ch.cyberduck.core.ftp.FTPFileType;
 import ch.cyberduck.core.preferences.PreferencesFactory;
 
 import org.apache.commons.lang3.StringUtils;
@@ -112,9 +111,8 @@ public final class HostBuilder {
      * @param anonymous    Log in without an account. For protocols that allow it.
      * @param encoding     Character set of the file names or blank for the default
      * @param connectMode  FTP connect mode, or default
-     * @param transferMode FTP transfer mode: binary, ascii or auto, or blank for the setting of the preferences
      */
-    public static void options(final Host host, final boolean anonymous, final String encoding, final FTPConnectMode connectMode, final String transferMode) {
+    public static void options(final Host host, final boolean anonymous, final String encoding, final FTPConnectMode connectMode) {
         final Protocol protocol = host.getProtocol();
         if(anonymous && protocol.isAnonymousConfigurable()) {
             host.getCredentials().setUsername(PreferencesFactory.get().getProperty("connection.login.anon.name"));
@@ -127,8 +125,6 @@ public final class HostBuilder {
             if(connectMode != null) {
                 host.setFTPConnectMode(connectMode);
             }
-            // Blank is the setting of the preferences
-            setOrClear(host, FTPFileType.MODE, transferMode);
         }
     }
 
@@ -141,20 +137,6 @@ public final class HostBuilder {
         }
         else {
             host.getCredentials().setIdentity(null);
-        }
-    }
-
-    /**
-     * Set a custom property of the bookmark or remove it for a blank value, so that the default applies again
-     */
-    static void setOrClear(final Host host, final String key, final String value) {
-        if(StringUtils.isNotBlank(value)) {
-            host.setProperty(key, value);
-        }
-        else if(host.getCustom().containsKey(key)) {
-            final java.util.Map<String, String> custom = new java.util.HashMap<>(host.getCustom());
-            custom.remove(key);
-            host.setCustom(custom);
         }
     }
 
@@ -174,6 +156,5 @@ public final class HostBuilder {
         to.getCredentials().setIdentity(from.getCredentials().getIdentity());
         to.setEncoding(from.getEncoding());
         to.setFTPConnectMode(from.getFTPConnectMode());
-        setOrClear(to, FTPFileType.MODE, from.getProperty(FTPFileType.MODE));
     }
 }

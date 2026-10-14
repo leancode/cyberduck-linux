@@ -1250,21 +1250,20 @@ the module are 108 (1 skipped without a keyring) and every scenario named below 
   download setting with one existing and one new file), 4 unit tests of the choice of the program, a test of the preference, and the
   SFTP scenario checks that an unchanged file is skipped and an older one is downloaded.
 
-- [x] **6.9 FTP: anonymous login, character set, connect mode, transfer mode**
+- [x] **6.9 FTP: anonymous login, character set, connect mode** (the transfer mode was removed again, see below)
 
   **Request**: FTP settings for the default character set, the transfer method (binary, ASCII, auto) and anonymous login.
   **Done**: the connection dialog shows Anonymous Login for protocols that allow it and, under More Options, the character set
-  (also for other protocols that have one), the FTP connect mode and the transfer mode. All are kept in the bookmark and shown again
-  when it is edited. The tab FTP in the preferences sets the default character set, the default transfer mode and the extensions
-  that auto sends as ASCII. Core change, small and opt-in: new `ftp/.../FTPFileType` chooses the file type of the data connection
-  from `ftp.transfer.mode` (`binary` default, `ascii`, `auto`) of the bookmark or the preferences, `FTPWriteFeature` uses it, and
-  `defaults` has the two new settings. Limit: it applies to uploads only. A converted download is shorter than the size the
-  server tells, which core counts as an incomplete transfer, so downloads stay binary (the preferences say so).
-  **Proof**: unit tests (6 for the file type, 4 for building a bookmark with options, 4 for the dialog, 1 for the tab) and smoke `ftp`
-  against a real FTP server in Docker (`delfer/alpine-ftp-server`): a bookmark in auto mode with ISO-8859-1 and passive mode
-  uploads `text.txt` (18 bytes with line feeds) and `data.bin`. The server has `text.txt` with carriage returns (20 bytes)
-  and `data.bin` unchanged (16 bytes), checked with `docker exec` by `smoke.sh`. The anonymous login is covered by unit tests only,
-  the test server has no anonymous account.
+  (also for other protocols that have one) and the FTP connect mode. Both are kept in the bookmark and shown again when it is edited.
+  The tab FTP in the preferences sets the default character set.
+  **Proof**: unit tests (building a bookmark with options, the dialog, the tab) and smoke `ftp` against a real FTP server in Docker
+  (`delfer/alpine-ftp-server`): a bookmark with ISO-8859-1 and the passive mode uploads `text.txt` and `data.bin`, and `smoke.sh` checks
+  with `docker exec` that both are on the server byte for byte. The anonymous login is covered by unit tests only, the test server has no
+  anonymous account.
+  **Transfer mode removed** (2026-10-14): the first version also had a transfer mode (binary, ASCII, auto by extension) for uploads,
+  with a core change (`ftp/.../FTPFileType`, one line in `FTPWriteFeature`, two settings in `defaults`). The upstream maintainer asked for
+  the reason. There was none beyond "FileZilla has it", no server needed it, and the maintainer says upstream dropped the setting long ago; silent conversion of line endings is also a risk, because
+  it changes files without being asked. So it is gone and `ftp`, `defaults` are the same as `master` again. Uploads are binary, as in every other version.
 
 - [x] **6.10 Drag files out of the listing**
 
@@ -1475,7 +1474,7 @@ the module are 108 (1 skipped without a keyring) and every scenario named below 
 
   - `master` mirrors `iterate-ch/cyberduck`. Nobody commits to it. It is updated with the Sync fork button of GitHub.
   - `main` is the Linux line and the default branch. Upstream is merged in with `git merge master`. The workflow `linux-gui.yml` runs on pushes to `main` and on pull requests.
-  - The code of the Linux version is in `linux/`. Changes outside it are kept few and small: `ftp/.../FTPFileType` and `FTPWriteFeature` (6.9), `defaults/.../default.properties`, `importer/.../FilezillaBookmarkCollection` (6.16), and the workflows.
+  - The code of the Linux version is in `linux/`. Changes outside it are kept few and small: `importer/.../FilezillaBookmarkCollection` (6.16), and the workflows.
   - The repository is renamed `cyberduck-linux`. Done by the owner on GitHub: [x] rename (2026-10-08, old links redirect), [x] default branch `main`, [ ] delete `cyberduck-linuxgui` (still there on 2026-10-08), [ ] switch off the upstream workflows that this repository does not use. CI on `main` passed (run 24) with the new name.
   - [x] Licence headers: `LICENSE.txt` is GPL version 3. Upstream files have both headers (1918 files "version 2 or later", 1392 files "version 3 or later"), and the files of `linux/` have "version 3 or later". Nothing to change.
 
@@ -1529,7 +1528,7 @@ the module are 108 (1 skipped without a keyring) and every scenario named below 
 
 - [ ] **7.3 Offer to upstream**
 
-  A branch from `master` with a few squashed commits (the history of `main` has about 60 commits and merges). The changes that help every platform go first as pull requests of their own: the FTP ASCII upload mode and the FileZilla port fix. Ask about the name in the same message.
+  A branch from `master` with a few squashed commits (the history of `main` has about 60 commits and merges). The one change that helps every platform is the FileZilla port fix, which goes first as a pull request of its own. The FTP ASCII upload mode is not offered: upstream does not want it and it was removed from the fork. Ask about the name in the same message.
 
 ---
 

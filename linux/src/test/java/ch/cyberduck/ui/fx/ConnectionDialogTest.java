@@ -18,7 +18,6 @@ package ch.cyberduck.ui.fx;
 import ch.cyberduck.core.Host;
 import ch.cyberduck.core.ProtocolFactory;
 import ch.cyberduck.core.ftp.FTPConnectMode;
-import ch.cyberduck.core.ftp.FTPFileType;
 import ch.cyberduck.core.ftp.FTPProtocol;
 import ch.cyberduck.core.preferences.PreferencesFactory;
 import ch.cyberduck.core.sftp.SFTPProtocol;
@@ -77,13 +76,12 @@ public class ConnectionDialogTest {
             dialog.getProtocolBox().setValue(ftp);
             assertTrue(dialog.getAnonymousBox().isVisible());
             assertTrue(dialog.getMore().isVisible());
-            assertTrue(dialog.getTransferModeBox().isVisible());
             assertTrue(dialog.getConnectModeBox().isVisible());
             dialog.getProtocolBox().setValue(sftp);
             assertFalse(dialog.getAnonymousBox().isVisible());
             assertFalse(dialog.getAnonymousBox().isManaged());
             // The character set can be set but not the modes of FTP
-            assertFalse(dialog.getTransferModeBox().isVisible());
+            assertFalse(dialog.getConnectModeBox().isVisible());
             return null;
         });
     }
@@ -146,13 +144,12 @@ public class ConnectionDialogTest {
     @Test
     public void testEditShowsWhatTheBookmarkHas() throws Exception {
         final Host bookmark = new Host(ftp, "ftp.example.net");
-        HostBuilder.options(bookmark, true, "ISO-8859-1", FTPConnectMode.active, "auto");
+        HostBuilder.options(bookmark, true, "ISO-8859-1", FTPConnectMode.active);
         onFx(() -> {
             final ConnectionDialog dialog = new ConnectionDialog(null, ProtocolFactory.get(), true, bookmark);
             assertTrue(dialog.getAnonymousBox().isSelected());
             assertEquals("ISO-8859-1", dialog.getEncodingBox().getValue());
             assertEquals(FTPConnectMode.active, dialog.getConnectModeBox().getValue());
-            assertEquals("auto", dialog.getTransferModeBox().getValue().getValue());
             return null;
         });
     }
@@ -164,8 +161,6 @@ public class ConnectionDialogTest {
             final ConnectionDialog dialog = new ConnectionDialog(null, ProtocolFactory.get(), true, bookmark);
             assertEquals("", dialog.getEncodingBox().getValue());
             assertEquals(FTPConnectMode.unknown, dialog.getConnectModeBox().getValue());
-            assertEquals("", dialog.getTransferModeBox().getValue().getValue());
-            assertNull(bookmark.getProperty(FTPFileType.MODE));
             return null;
         });
     }
