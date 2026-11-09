@@ -16,9 +16,9 @@ package ch.cyberduck.ui.fx;
  */
 
 import ch.cyberduck.core.Host;
+import ch.cyberduck.core.HostPasswordStore;
 import ch.cyberduck.core.Local;
 import ch.cyberduck.core.LocalFactory;
-import ch.cyberduck.core.PasswordStore;
 import ch.cyberduck.core.Protocol;
 import ch.cyberduck.core.ProtocolFactory;
 import ch.cyberduck.core.exception.AccessDeniedException;
@@ -65,7 +65,7 @@ public final class BookmarkImport {
      * @param keychain Where to put the passwords that FileZilla stored
      * @return The servers of the file
      */
-    public static List<Host> fileZilla(final Local file, final PasswordStore keychain) throws AccessDeniedException {
+    public static List<Host> fileZilla(final Local file, final HostPasswordStore keychain) throws AccessDeniedException {
         final List<Host> found = new ArrayList<>();
         new FilezillaBookmarkCollection(keychain) {
             {
