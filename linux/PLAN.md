@@ -1489,9 +1489,9 @@ the module are 108 (1 skipped without a keyring) and every scenario named below 
 - [x] **7.2b Release after every push to `main`** (decided 2026-10-08)
 
   The workflow `linux-release.yml` starts when a run of `Linux GUI` on `main` ends well, builds that commit for x64 and arm64 and creates a release `linux-v<version>` (the version is the one in the name of the package, the build number is the number of commits), marked as the latest release, with the deb, the rpm and `SHA256SUMS`. A tag `v*-linux.*` still makes a pre-release for a named version. A run that failed makes no release. A release that exists is not made twice. Releases are not removed by the workflow; if the list gets long, old ones can be deleted by hand or a rule added.
-  - [x] The first release made by the workflow: `linux-v9.6.0.45947` (2026-10-08). It was made before the history of `main` was rewritten (see 7.4), so its tag points at the old tip. To be deleted by the owner on GitHub, the session may not delete releases or tags.
+  - [x] The first release made by the workflow: `linux-v9.6.0.45947` (2026-10-08). It was made before the history of `main` was rewritten (see 7.4), so its tag pointed at the old tip. The release was removed on GitHub; the tag was deleted on 2026-10-14 with the owner's `gh` login.
   - [x] The check "the commit passed the tests" asked the list of runs and found none a second after the run had finished. For a finished run of `Linux GUI` the event is the proof, the list is only asked for tags and manual starts.
-  - [ ] The first release of the new history.
+  - [x] The first release of the new history: `linux-v9.6.0.45948` (2026-10-08), followed by one release per push to `main` up to `linux-v9.6.0.45959` (2026-10-14).
 
 - [x] **7.2c Version numbers go up with every build**
 
@@ -1522,13 +1522,24 @@ the module are 108 (1 skipped without a keyring) and every scenario named below 
 
   Unit tests: `UrlHandlerTest`, `SingleInstanceTest`, the waiting tests in `FxLoginCallbackTest`, the note in `ConnectionDialogTest` and the entry in `DesktopEntryTest`. Checked by hand under Xvfb: a second start with a callback link reaches the running application and ends in under a second. Not covered: the real login with Google, which needs a desktop with a web browser.
 
+- [x] **7.8 Housekeeping and the first merge of upstream** (2026-10-14 to 2026-11-09)
+
+  - Deleted on 2026-10-14 with the owner's `gh` login: the tag `linux-v9.6.0.45947` (7.2b), the branch `ftp-ascii-upload` (the removed ASCII mode, see 6.9), the merged branch of pull request #2, and `filezilla-port`, because upstream merged that fix as iterate-ch/cyberduck#18521 with its test (7.3).
+  - `master` is not updated with the Sync fork button but with `git fetch upstream && git push origin upstream/master:master`; the result is the same, a fast-forward to `iterate-ch/cyberduck`.
+  - The first merge of upstream into `main` is pull request #6 (509 commits; #5 with 37 commits went stale before it was merged and was closed). It is tested by the CI run of the pull request, because this machine has no JDK 25. Three runs were needed:
+    - Conflicts: `CHANGELOG.md` (upstream's 9.6.0 list plus the Linux line) and `.github/workflows/deploy.yml` (upstream added the module `cli/profiles` to the list of projects; `linux` stays in the Linux list).
+    - Upstream released 9.6.0 and moved the reactor to `9.6.1-SNAPSHOT`. `linux/pom.xml` is not in upstream, so its parent version does not move with the release plugin and has to be changed by hand. The package version follows (`9.6.1.<number of commits>`), so it still grows.
+    - The core changed `FilezillaBookmarkCollection` to take a `HostPasswordStore` (so the password of a bookmark can be updated and deleted through the same store). `BookmarkImport.fileZilla` takes the same type.
+  - Proof: run 3 of the pull request, 150 tests, 0 failures, 2 skipped, the scenarios of `smoke.sh` under Xvfb, the deb installed on a clean Ubuntu and the rpm on a clean Fedora.
+  - Upstream's new `ProxyCommand` support (`OpenSSHProxyCommandConnector`) puts the hostname and username into the command without quoting and runs it with `sh -c`. With a `ProxyCommand` under `Host *` in `~/.ssh/config`, a crafted `sftp://` link could run a local command. Not reproduced. A private note for upstream was written for the owner to send. Not changed in the fork.
+
 - [ ] **7.2 First release**
 
   After the Yes items of 6.12 are done and tested again on a desktop: a pre-release tag such as `v9.6.0-linux.1` (upstream version plus the Linux build). It is the first real run of the release workflow (4.6). Until upstream agrees on the name, the packages are described as a community build, "Cyberduck for Linux (unofficial)", because "Cyberduck" is a trademark of iterate GmbH.
 
 - [ ] **7.3 Offer to upstream**
 
-  A branch from `master` with a few squashed commits (the history of `main` has about 60 commits and merges). The one change that helps every platform is the FileZilla port fix, which goes first as a pull request of its own. The FTP ASCII upload mode is not offered: upstream does not want it and it was removed from the fork. Ask about the name in the same message.
+  A branch from `master` with a few squashed commits (the history of `main` has about 60 commits and merges). The one change that helps every platform was the FileZilla port fix; it was offered as a pull request of its own and merged upstream (iterate-ch/cyberduck#18521, 2026-10). The FTP ASCII upload mode is not offered: upstream does not want it and it was removed from the fork. Ask about the name in the same message.
 
 ---
 
