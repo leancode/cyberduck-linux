@@ -32,6 +32,7 @@ import ch.cyberduck.core.Permission;
 import ch.cyberduck.core.Protocol;
 import ch.cyberduck.core.ProtocolFactory;
 import ch.cyberduck.core.SessionPoolFactory;
+import ch.cyberduck.core.TerminalServiceFactory;
 import ch.cyberduck.core.UserDateFormatterFactory;
 import ch.cyberduck.core.formatter.SizeFormatterFactory;
 import ch.cyberduck.core.pool.SessionPool;
@@ -59,6 +60,7 @@ import ch.cyberduck.core.transfer.Transfer;
 import ch.cyberduck.core.transfer.TransferItem;
 import ch.cyberduck.core.transfer.TransferOptions;
 import ch.cyberduck.core.transfer.UploadTransfer;
+import ch.cyberduck.core.exception.AccessDeniedException;
 import ch.cyberduck.core.exception.HostParserException;
 import ch.cyberduck.core.features.Location;
 import ch.cyberduck.core.worker.CreateDirectoryWorker;
@@ -1540,9 +1542,11 @@ public class BrowserController extends FxController {
         }
         final Path selected = table.getSelectionModel().getSelectedItem();
         final Path folder = null != selected && selected.isDirectory() ? selected : workdir;
-        final String failure = TerminalLauncher.open(pool.getHost(), folder);
-        if(failure != null) {
-            dialogs.error(Messages.get("Open in Terminal"), failure);
+        try {
+            TerminalServiceFactory.get().open(pool.getHost(), folder);
+        }
+        catch(AccessDeniedException e) {
+            dialogs.error(Messages.get("Open in Terminal"), e.getMessage());
         }
     }
 

@@ -174,6 +174,7 @@ public class LinuxApplicationPreferences extends DefaultPreferences {
         this.setDefault("factory.locale.class", RegexLocale.class.getName());
         this.setDefault("factory.browserlauncher.class", XdgOpenBrowserLauncher.class.getName());
         this.setDefault("factory.applicationlauncher.class", LinuxApplicationLauncher.class.getName());
+        this.setDefault("factory.terminalservice.class", TerminalLauncher.class.getName());
         this.setDefault("factory.applicationfinder.class", LinuxApplicationFinder.class.getName());
         this.setDefault("factory.reveal.class", XdgOpenRevealService.class.getName());
         this.setDefault("factory.editorfactory.class", DefaultEditorFactory.class.getName());

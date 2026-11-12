@@ -18,6 +18,9 @@ package ch.cyberduck.ui.fx;
 import ch.cyberduck.core.Credentials;
 import ch.cyberduck.core.Host;
 import ch.cyberduck.core.Path;
+import ch.cyberduck.core.TerminalService;
+import ch.cyberduck.core.exception.AccessDeniedException;
+import ch.cyberduck.core.exception.LocalAccessDeniedException;
 import ch.cyberduck.core.local.ApplicationFinder;
 import ch.cyberduck.core.local.ApplicationFinderFactory;
 import ch.cyberduck.core.preferences.PreferencesFactory;
@@ -30,7 +33,7 @@ import java.util.List;
 /**
  * Opens a terminal with a shell on the server in the folder that is shown. Only for servers that are reached with SSH.
  */
-public final class TerminalLauncher {
+public final class TerminalLauncher implements TerminalService {
 
     /**
      * Name of the preference with the command of the terminal
@@ -49,10 +52,6 @@ public final class TerminalLauncher {
      */
     private static final List<String> SCHEMAS = List.of("org.cinnamon.desktop.default-applications.terminal",
         "org.gnome.desktop.default-applications.terminal", "org.mate.applications-terminal");
-
-    private TerminalLauncher() {
-        //
-    }
 
     /**
      * @return True when the server is reached with SSH
@@ -167,12 +166,13 @@ public final class TerminalLauncher {
      * Start the terminal. A terminal that is gone within two seconds with a failure did not start, and what it said is
      * the reason.
      *
-     * @return Null when the terminal started, otherwise what went wrong
+     * @throws AccessDeniedException When no terminal was found or the terminal did not start
      */
-    public static String open(final Host host, final Path folder) {
+    @Override
+    public void open(final Host host, final Path folder) throws AccessDeniedException {
         final String terminal = find();
         if(null == terminal) {
-            return Messages.get("No terminal program was found. Install one or set it in the preferences.");
+            throw new LocalAccessDeniedException(Messages.get("No terminal program was found. Install one or set it in the preferences."));
         }
         final List<String> command = command(terminal, host, folder);
         java.nio.file.Path output = null;
@@ -185,8 +185,8 @@ public final class TerminalLauncher {
                 .start();
             if(process.waitFor(2, java.util.concurrent.TimeUnit.SECONDS) && process.exitValue() != 0) {
                 final String said = StringUtils.defaultString(new String(java.nio.file.Files.readAllBytes(output), java.nio.charset.StandardCharsets.UTF_8)).strip();
-                return String.format("%s %s", String.format(Messages.get("The terminal {0} did not start.").replace("{0}", "%s"), command.get(0)),
-                    StringUtils.abbreviate(said, 400)).strip();
+                throw new LocalAccessDeniedException(String.format("%s %s", String.format(Messages.get("The terminal {0} did not start.").replace("{0}", "%s"), command.get(0)),
+                    StringUtils.abbreviate(said, 400)).strip());
             }
             // Collect the process when it ends so that it does not stay a zombie
             final Thread reaper = new Thread(() -> {
@@ -199,14 +199,12 @@ public final class TerminalLauncher {
             }, "terminal-reaper");
             reaper.setDaemon(true);
             reaper.start();
-            return null;
         }
         catch(java.io.IOException e) {
-            return String.format("%s %s", String.format(Messages.get("The terminal {0} did not start.").replace("{0}", "%s"), command.get(0)), e.getMessage());
+            throw new LocalAccessDeniedException(String.format("%s %s", String.format(Messages.get("The terminal {0} did not start.").replace("{0}", "%s"), command.get(0)), e.getMessage()), e);
         }
         catch(InterruptedException e) {
             Thread.currentThread().interrupt();
-            return null;
         }
         finally {
             if(output != null) {
