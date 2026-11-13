@@ -1553,6 +1553,8 @@ the module are 108 (1 skipped without a keyring) and every scenario named below 
 
   Fixed on the way: Open in Terminal in the File menu was enabled on every connection and silently did nothing on the ones without a shell; it is now disabled there, and it works for the local filesystem, where the terminal starts in the folder. Its shortcut moved from Ctrl+Alt+T, which Cinnamon and GNOME take for their own terminal, to Ctrl+Shift+T.
 
+  Also found while waiting for the third occurrence: the bookmark list filled the row last clicked, so a click on Megalog while connected to Google Drive looked like a connection to Megalog, and the owner expected Open in Terminal to apply to it. The filled row is now the bookmark of the open connection (`BrowserController.hostProperty`, set when a mount starts and cleared when the disconnect has finished); a click still selects a row for Edit, Delete and the context menu, but the selection is not drawn. The context menu of the open bookmark says Disconnect instead of Connect. Checked in the `bookmarks` smoke scenario; the owner has not seen it on the desktop yet.
+
 - [ ] **7.2 First release**
 
   After the Yes items of 6.12 are done and tested again on a desktop: a pre-release tag such as `v9.6.0-linux.1` (upstream version plus the Linux build). It is the first real run of the release workflow (4.6). Until upstream agrees on the name, the packages are described as a community build, "Cyberduck for Linux (unofficial)", because "Cyberduck" is a trademark of iterate GmbH.

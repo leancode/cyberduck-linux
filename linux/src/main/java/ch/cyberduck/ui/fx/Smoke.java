@@ -1081,6 +1081,12 @@ public final class Smoke {
             return null;
         });
         awaitRendered(browser, directory);
+        // The row of the open connection is filled, and its menu offers to close the connection
+        await("the open bookmark is filled", () -> onFx(() -> bookmarkRow(controller, bookmark).getStyle().contains("-fx-selection-bar")));
+        check("the menu of the open bookmark says Disconnect", onFx(() -> {
+            controller.getList().getSelectionModel().select(bookmark);
+            return bookmarkMenu(controller).equals(List.of("Disconnect", "Edit", "Duplicate Bookmark", "Delete"));
+        }));
 
         // Edit
         onFx(() -> {
@@ -1107,6 +1113,15 @@ public final class Smoke {
         await("copy listed", () -> onFx(() -> 2 == controller.getList().getItems().size()));
         final Host copy = onFx(() -> controller.getList().getItems().stream().filter(h -> !h.getUuid().equals(bookmark.getUuid())).findFirst().orElseThrow());
         check("copy is named after the original", "Renamed copy".equals(copy.getNickname()));
+        // Clicking another bookmark does not fill its row: the filled row is the connection, not the selection
+        await("copy row", () -> onFx(() -> null != bookmarkRow(controller, copy)));
+        check("the selected bookmark is not filled", onFx(() -> {
+            controller.getList().getSelectionModel().select(copy);
+            controller.getList().applyCss();
+            return !bookmarkRow(controller, copy).getStyle().contains("-fx-selection-bar")
+                && bookmarkRow(controller, bookmark).getStyle().contains("-fx-selection-bar");
+        }));
+        check("the menu of another bookmark says Connect", onFx(() -> bookmarkMenu(controller).equals(List.of("Connect", "Edit", "Duplicate Bookmark", "Delete"))));
         await("copy file written", () -> java.nio.file.Files.exists(folder.resolve(String.format("%s.duck", copy.getUuid()))));
 
         // Import: hosts of an ssh configuration become bookmarks once
@@ -1149,6 +1164,15 @@ public final class Smoke {
         });
         await("bookmark removed", () -> onFx(() -> controller.getList().getItems().isEmpty()));
         await("bookmark file removed", () -> !java.nio.file.Files.exists(file));
+    }
+
+    /**
+     * @return Texts of the items the context menu of the bookmark list would show for the selected bookmark
+     */
+    private static List<String> bookmarkMenu(final BookmarkController controller) {
+        final javafx.scene.control.ContextMenu menu = controller.getList().getContextMenu();
+        menu.getOnShowing().handle(new javafx.stage.WindowEvent(menu, javafx.stage.WindowEvent.WINDOW_SHOWING));
+        return menu.getItems().stream().filter(item -> item.isVisible() && null != item.getText()).map(javafx.scene.control.MenuItem::getText).collect(Collectors.toList());
     }
 
     private static javafx.scene.control.ListCell<?> bookmarkRow(final BookmarkController controller, final Host bookmark) {

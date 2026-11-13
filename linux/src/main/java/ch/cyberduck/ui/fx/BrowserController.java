@@ -209,6 +209,10 @@ public class BrowserController extends FxController {
     private Path rendered;
     private final javafx.beans.property.ObjectProperty<Path> renderedProperty = new javafx.beans.property.SimpleObjectProperty<>();
     /**
+     * Bookmark of the connection that is open or opening, null when disconnected. The bookmark list fills its row.
+     */
+    private final javafx.beans.property.ObjectProperty<Host> hostProperty = new javafx.beans.property.SimpleObjectProperty<>();
+    /**
      * Directory requested but not yet listed. Used to ignore a listing that has been superseded.
      */
     private Path pending;
@@ -1028,6 +1032,13 @@ public class BrowserController extends FxController {
     }
 
     /**
+     * @return Bookmark of the connection that is open or opening, null when disconnected
+     */
+    public javafx.beans.property.ReadOnlyObjectProperty<Host> hostProperty() {
+        return hostProperty;
+    }
+
+    /**
      * Open connection in browser. Closes the current connection first.
      *
      * @param bookmark Bookmark
@@ -1036,6 +1047,7 @@ public class BrowserController extends FxController {
         log.debug("Mount session for {}", bookmark);
         this.unmount(() -> {
             pool = SessionPoolFactory.create(this, bookmark, SessionPoolFactory.Usage.browser);
+            hostProperty.set(bookmark);
             this.background(new WorkerBackgroundAction<>(this, pool, new MountWorker(bookmark, cache, listener) {
                 @Override
                 public void cleanup(final Path home, final ch.cyberduck.core.exception.BackgroundException failure) {
@@ -1074,6 +1086,7 @@ public class BrowserController extends FxController {
                 super.cleanup();
                 closing.shutdown();
                 BrowserController.this.pool = SessionPool.DISCONNECTED;
+                hostProperty.set(null);
                 cache.clear();
                 workdir = null;
                 pending = null;

@@ -112,7 +112,9 @@ public class BookmarkController {
         this.bookmarks = bookmarks;
         this.dialogs = dialogs;
 
-        list.setCellFactory(view -> new BookmarkCell());
+        list.setCellFactory(view -> new BookmarkCell(browser.hostProperty()));
+        // The filled row follows the connection, so the rows are drawn again when it opens or closes
+        browser.hostProperty().addListener((observable, previous, host) -> list.refresh());
         list.setPlaceholder(new Label(Messages.get("No bookmarks")));
         list.setOnMouseClicked(event -> {
             if(event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
@@ -141,13 +143,23 @@ public class BookmarkController {
         final ContextMenu menu = new ContextMenu();
         final MenuItem connectItem = new MenuItem(Messages.get("Connect"));
         connectItem.setOnAction(event -> this.connect());
+        final MenuItem disconnectItem = new MenuItem(Messages.get("Disconnect"));
+        disconnectItem.setOnAction(event -> browser.unmount(() -> {
+            //
+        }));
+        // The bookmark of the open connection offers to close it, every other one to open it
+        menu.setOnShowing(event -> {
+            final boolean connected = this.isConnected(list.getSelectionModel().getSelectedItem());
+            connectItem.setVisible(!connected);
+            disconnectItem.setVisible(connected);
+        });
         final MenuItem editItem = new MenuItem(Messages.get("Edit"));
         editItem.setOnAction(event -> this.edit());
         final MenuItem copyItem = new MenuItem(Messages.get("Duplicate Bookmark"));
         copyItem.setOnAction(event -> this.duplicate());
         final MenuItem deleteItem = new MenuItem(Messages.get("Delete"));
         deleteItem.setOnAction(event -> this.delete());
-        menu.getItems().setAll(connectItem, editItem, copyItem, new SeparatorMenuItem(), deleteItem);
+        menu.getItems().setAll(connectItem, disconnectItem, editItem, copyItem, new SeparatorMenuItem(), deleteItem);
         list.setContextMenu(menu);
         // The buttons keep their text and go to a second line when the list is narrow
         for(javafx.scene.layout.Region button : new javafx.scene.layout.Region[]{add, edit, delete, more}) {
@@ -180,6 +192,14 @@ public class BookmarkController {
 
     ConnectionDialog getDialog() {
         return dialog;
+    }
+
+    /**
+     * @param bookmark Bookmark or null
+     * @return True when the connection of the browser was opened with this bookmark
+     */
+    boolean isConnected(final Host bookmark) {
+        return null != bookmark && bookmark.equals(browser.hostProperty().get());
     }
 
     /**
@@ -362,13 +382,23 @@ public class BookmarkController {
         }
     }
 
+    /**
+     * A row of the list. The filled row is the bookmark of the open connection, not the row last clicked: the
+     * selection is kept for the buttons and the context menu, but is not drawn, as a filled row reads as the
+     * connection the window shows.
+     */
     private static final class BookmarkCell extends ListCell<Host> {
+        private final javafx.beans.value.ObservableValue<Host> connected;
         private final Label name = new Label();
         private final Label url = new Label();
         private final VBox box = new VBox(2, name, url);
         private final HBox row = new HBox(8);
 
-        private BookmarkCell() {
+        /**
+         * @param connected Bookmark of the open connection, null when disconnected
+         */
+        private BookmarkCell(final javafx.beans.value.ObservableValue<Host> connected) {
+            this.connected = connected;
             name.setStyle("-fx-font-weight: bold;");
             url.setStyle("-fx-text-fill: gray;");
             row.setAlignment(Pos.CENTER_LEFT);
@@ -402,13 +432,28 @@ public class BookmarkController {
             super.updateItem(item, empty);
             if(empty || null == item) {
                 setGraphic(null);
+                setStyle(null);
                 return;
             }
+            setStyle(style(item.equals(connected.getValue()), getIndex()));
             name.setText(BookmarkNameProvider.toString(item));
             final String user = StringUtils.isNotBlank(item.getCredentials().getUsername()) ? String.format("%s@", item.getCredentials().getUsername()) : StringUtils.EMPTY;
             url.setText(String.format("%s://%s%s", item.getProtocol().getScheme().name(), user, item.getHostname()));
             row.getChildren().setAll(icon(item), box);
             setGraphic(row);
+        }
+
+        /**
+         * The style of a row, set on the row itself so that it wins over the selected and focused styles of the
+         * standard stylesheet. The text takes its color from the background as in the standard style.
+         *
+         * @param connected True for the bookmark of the open connection
+         * @param index     Position in the list, for the alternating background of the rows
+         * @return Style with the background of the row
+         */
+        static String style(final boolean connected, final int index) {
+            final String background = connected ? "-fx-selection-bar" : index % 2 == 0 ? "-fx-control-inner-background" : "-fx-control-inner-background-alt";
+            return String.format("-fx-background: %s; -fx-background-color: -fx-background;", background);
         }
     }
 }
