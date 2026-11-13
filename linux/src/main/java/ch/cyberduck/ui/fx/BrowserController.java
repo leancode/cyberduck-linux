@@ -633,8 +633,11 @@ public class BrowserController extends FxController {
         final MenuItem openWeb = this.item(Messages.get("Open in Web Browser"), this::openInWebBrowser);
         openWeb.disableProperty().bind(newFolder.disableProperty());
         final MenuItem terminalItem = this.item(Messages.get("Open in Terminal"), this::openTerminal);
-        terminalItem.setAccelerator(KeyCombination.keyCombination("Shortcut+Alt+T"));
-        terminalItem.disableProperty().bind(newFolder.disableProperty());
+        // Not Ctrl+Alt+T, which the desktops take for their own terminal before the application sees it
+        terminalItem.setAccelerator(KeyCombination.keyCombination("Shortcut+Shift+T"));
+        // Only servers reached with SSH have a shell to open
+        terminalItem.disableProperty().bind(Bindings.createBooleanBinding(
+            () -> null == rendered || !TerminalLauncher.isSupported(pool.getHost()), renderedProperty));
         final MenuItem cutItem = this.item(Messages.get("Cut"), this::cutFiles);
         cutItem.setAccelerator(KeyCombination.keyCombination("Shortcut+X"));
         cutItem.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
