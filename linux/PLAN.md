@@ -1543,6 +1543,14 @@ the module are 108 (1 skipped without a keyring) and every scenario named below 
 
   Released as 9.6.1.46511 and confirmed on the desktop of the owner on 2026-11-13: the Google Drive login works and no certificate dialog appears.
 
+- [ ] **7.10 Owner test of 9.6.1.46511: a disconnect from Google Drive that never ended** (2026-11-13)
+
+  After the window had sat connected to Google Drive for a while, a double click on the Megalog bookmark showed "Disconnecting google" at the bottom and stayed there; the owner quit the application. It could not be reproduced: a fresh Google Drive connection disconnects at once and Megalog opens. Not the cause: the status line is only overwritten by the next action (the mount of Megalog says "Mounting megalog" as soon as it starts), so the disconnect itself did not finish; closing a Google Drive session makes no request (`Session.close` resets the credentials and shuts the HTTP transport down), so an expired token is not it; nothing runs periodically in the Linux browser while it idles. Candidates: the lock of `StatelessSessionPool`, held by an action that was still in `borrow`, or the HTTP transport shutdown. No thread dump was taken, as the process had been restarted before it was asked for.
+
+  Next time it happens, do not quit. `kill -QUIT $(pgrep -f /opt/cyberduck/bin/Cyberduck)` writes a thread dump to the standard error of the application, which the desktop keeps in `~/.xsession-errors`; the threads named `background-*` and `JavaFX Application Thread` show where it waits.
+
+  Fixed on the way: Open in Terminal in the File menu was enabled on every connection and silently did nothing on the ones without a shell; it is now disabled there, and it works for the local filesystem, where the terminal starts in the folder. Its shortcut moved from Ctrl+Alt+T, which Cinnamon and GNOME take for their own terminal, to Ctrl+Shift+T.
+
 - [ ] **7.2 First release**
 
   After the Yes items of 6.12 are done and tested again on a desktop: a pre-release tag such as `v9.6.0-linux.1` (upstream version plus the Linux build). It is the first real run of the release workflow (4.6). Until upstream agrees on the name, the packages are described as a community build, "Cyberduck for Linux (unofficial)", because "Cyberduck" is a trademark of iterate GmbH.
