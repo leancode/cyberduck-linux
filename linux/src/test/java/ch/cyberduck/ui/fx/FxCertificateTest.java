@@ -20,12 +20,16 @@ import ch.cyberduck.core.exception.ConnectionCanceledException;
 
 import org.junit.Test;
 
+import javax.net.ssl.X509TrustManager;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.fail;
 import static org.junit.Assert.assertTrue;
 
 public class FxCertificateTest {
@@ -86,5 +90,58 @@ public class FxCertificateTest {
     public void testStoreDoesNotTrustEmptyChain() {
         assertFalse(new FxCertificateStore().verify((hostname, certificates) -> {
         }, "example.net", Collections.emptyList()));
+    }
+
+    @Test
+    public void testRuntimeTrustManagerHasRoots() {
+        final X509TrustManager runtime = FxCertificateStore.runtimeTrustManager();
+        assertNotNull(runtime);
+        // The trust store of the runtime, not an empty one
+        assertTrue(runtime.getAcceptedIssuers().length > 0);
+    }
+
+    @Test
+    public void testStoreTrustsChainOfRuntimeWithoutAsking() throws Exception {
+        final List<X509Certificate> chain = Collections.singletonList(TestCertificates.selfSigned("example.net", 30));
+        final CertificateTrustCallback noPrompt = (hostname, certificates) -> fail("Trusted certificate must not be asked about");
+        assertTrue(new FxCertificateStore(new AcceptingTrustManager()).verify(noPrompt, "example.net", chain));
+    }
+
+    @Test
+    public void testStoreAsksWhenNameDoesNotMatch() throws Exception {
+        final List<X509Certificate> chain = Collections.singletonList(TestCertificates.selfSigned("other.net", 30));
+        final FakeDialogService dialogs = new FakeDialogService();
+        assertTrue(new FxCertificateStore(new AcceptingTrustManager()).verify(new FxCertificateTrustCallback(dialogs), "example.net", chain));
+        assertEquals(1, dialogs.titles.size());
+    }
+
+    @Test
+    public void testStoreAsksWhenRuntimeDoesNotTrust() throws Exception {
+        // A self-signed certificate is not trusted by the runtime
+        final List<X509Certificate> chain = Collections.singletonList(TestCertificates.selfSigned("example.net", 30));
+        final FakeDialogService dialogs = new FakeDialogService();
+        assertTrue(new FxCertificateStore().verify(new FxCertificateTrustCallback(dialogs), "example.net", chain));
+        assertEquals(1, dialogs.titles.size());
+    }
+
+    /**
+     * Stands in for the runtime with a chain it trusts
+     */
+    private static final class AcceptingTrustManager implements X509TrustManager {
+        @Override
+        public void checkClientTrusted(final X509Certificate[] chain, final String authType) {
+        }
+
+        @Override
+        public void checkServerTrusted(final X509Certificate[] chain, final String authType) throws CertificateException {
+            if(chain.length == 0) {
+                throw new CertificateException("No chain");
+            }
+        }
+
+        @Override
+        public X509Certificate[] getAcceptedIssuers() {
+            return new X509Certificate[0];
+        }
     }
 }

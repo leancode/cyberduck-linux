@@ -1533,6 +1533,14 @@ the module are 108 (1 skipped without a keyring) and every scenario named below 
   - Proof: run 3 of the pull request, 150 tests, 0 failures, 2 skipped, the scenarios of `smoke.sh` under Xvfb, the deb installed on a clean Ubuntu and the rpm on a clean Fedora.
   - Upstream's new `ProxyCommand` support (`OpenSSHProxyCommandConnector`) puts the hostname and username into the command without quoting and runs it with `sh -c`. With a `ProxyCommand` under `Host *` in `~/.ssh/config`, a crafted `sftp://` link could run a local command. Not reproduced. A private note for upstream was written for the owner to send. Not changed in the fork.
 
+- [x] **7.9 Owner test of 9.6.1.46510: certificates of the runtime are trusted** (2026-11-13)
+
+  Quick Connect to `sftp://root@10.10.100.99` logged in with the ssh key, through upstream's new parser of `~/.ssh/config`. The Google Drive login in the web browser worked, but every connection to `www.googleapis.com` asked "Certificate not trusted", for a genuine certificate (issuer WE2 of Google Trust Services, root GTS Root R4).
+
+  Cause: the note in 2.4 was wrong. The core does not check a chain against the Java runtime before it asks the store; `CertificateStoreX509TrustManager.verify` asks the store about every chain, and the macOS and Windows stores do the check with the keychain of the system. `FxCertificateStore` asked the user about everything. (Upstream's `DefaultX509TrustManager` is initialised with an unloaded key store and so trusts nothing, checked with a small program; it is only used in tests and for reachability.)
+
+  Fix: `FxCertificateStore` checks the chain with the trust manager of the runtime (`TrustManagerFactory` with no key store loads the `cacerts` the bundled runtime ships, 120 roots, including GTS Root R4) and the host name with `DefaultHostnameVerifier`. Only chains that fail are put to the user. Tests: the trust manager of the runtime has roots, a chain the runtime trusts is not asked about, a name that does not match is asked about, a self-signed certificate is asked about. Not done: an accepted self-signed certificate is remembered for the session only, so a NAS with its own certificate asks on every connection; the macOS version keeps it in the keychain.
+
 - [ ] **7.2 First release**
 
   After the Yes items of 6.12 are done and tested again on a desktop: a pre-release tag such as `v9.6.0-linux.1` (upstream version plus the Linux build). It is the first real run of the release workflow (4.6). Until upstream agrees on the name, the packages are described as a community build, "Cyberduck for Linux (unofficial)", because "Cyberduck" is a trademark of iterate GmbH.
