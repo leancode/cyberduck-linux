@@ -18,6 +18,7 @@ package ch.cyberduck.ui.fx;
 import ch.cyberduck.core.Host;
 import ch.cyberduck.core.LocalFactory;
 import ch.cyberduck.core.Path;
+import ch.cyberduck.core.nio.LocalProtocol;
 import ch.cyberduck.core.preferences.PreferencesFactory;
 import ch.cyberduck.core.sftp.SFTPProtocol;
 
@@ -89,10 +90,42 @@ public class TerminalLauncherTest {
     }
 
     @Test
-    public void testOnlyForSsh() {
+    public void testOnlyForSshAndLocal() {
         assertTrue(TerminalLauncher.isSupported(host()));
+        assertTrue(TerminalLauncher.isSupported(new Host(new LocalProtocol(), new LocalProtocol().getDefaultHostname())));
         assertFalse(TerminalLauncher.isSupported(new Host(new ch.cyberduck.core.ftp.FTPProtocol(), "example.net")));
         assertFalse(TerminalLauncher.isSupported(null));
+    }
+
+    @Test
+    public void testLocalFolderNeedsNoSsh() {
+        final Host local = new Host(new LocalProtocol(), new LocalProtocol().getDefaultHostname());
+        assertEquals(List.of("gnome-terminal"), TerminalLauncher.command("gnome-terminal", local, folder));
+        assertEquals(List.of("alacritty", "--class", "cyberduck"), TerminalLauncher.command("alacritty --class cyberduck", local, folder));
+    }
+
+    @Test
+    public void testLocalFolderIsWhereTheTerminalStarts() throws Exception {
+        final java.io.File log = temporary.newFile();
+        final java.io.File terminal = script("pwd > " + log.getAbsolutePath());
+        PreferencesFactory.get().setProperty(TerminalLauncher.PROPERTY, terminal.getAbsolutePath());
+        final java.io.File directory = temporary.newFolder("o'brien");
+        final Host local = new Host(new LocalProtocol(), new LocalProtocol().getDefaultHostname());
+        assertNull(TerminalLauncher.open(local, new Path(directory.getAbsolutePath(), EnumSet.of(Path.Type.directory))));
+        final long deadline = System.currentTimeMillis() + 5000;
+        while(log.length() == 0 && System.currentTimeMillis() < deadline) {
+            Thread.sleep(50);
+        }
+        final String given = new String(java.nio.file.Files.readAllBytes(log.toPath()), java.nio.charset.StandardCharsets.UTF_8).strip();
+        assertEquals(directory.getCanonicalPath(), new java.io.File(given).getCanonicalPath());
+    }
+
+    @Test
+    public void testLocalFolderThatIsGoneSaysWhy() {
+        PreferencesFactory.get().setProperty(TerminalLauncher.PROPERTY, "/bin/sh");
+        final Host local = new Host(new LocalProtocol(), new LocalProtocol().getDefaultHostname());
+        final String failure = TerminalLauncher.open(local, new Path("/nonexistent/folder", EnumSet.of(Path.Type.directory)));
+        assertTrue(failure, failure.contains("did not start"));
     }
 
     @Test

@@ -28,7 +28,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Opens a terminal with a shell on the server in the folder that is shown. Only for servers that are reached with SSH.
+ * Opens a terminal with a shell on the server in the folder that is shown. Only for servers that are reached with SSH,
+ * and for the local filesystem, where the shell runs in the folder itself.
  */
 public final class TerminalLauncher {
 
@@ -55,10 +56,20 @@ public final class TerminalLauncher {
     }
 
     /**
-     * @return True when the server is reached with SSH
+     * @return True when the server is reached with SSH or is the local filesystem
      */
     public static boolean isSupported(final Host host) {
-        return null != host && host.getProtocol().getScheme() == ch.cyberduck.core.Scheme.sftp;
+        if(null == host) {
+            return false;
+        }
+        return host.getProtocol().getScheme() == ch.cyberduck.core.Scheme.sftp || isLocal(host);
+    }
+
+    /**
+     * @return True for the local filesystem, where no ssh is needed
+     */
+    static boolean isLocal(final Host host) {
+        return host.getProtocol().getScheme() == ch.cyberduck.core.Scheme.file;
     }
 
     /**
@@ -119,9 +130,13 @@ public final class TerminalLauncher {
      * @param terminal Command of the terminal program
      * @param host     Server, with the key file and the port
      * @param folder   Folder to start in
-     * @return Command and arguments that start the shell in the terminal
+     * @return Command and arguments that start the shell in the terminal. For the local filesystem only the terminal,
+     * which is started in the folder and so opens its shell there
      */
     public static List<String> command(final String terminal, final Host host, final Path folder) {
+        if(isLocal(host)) {
+            return new ArrayList<>(LinuxApplicationLauncher.tokenize(terminal));
+        }
         final List<String> ssh = new ArrayList<>(List.of("ssh", "-t"));
         if(host.getPort() != host.getProtocol().getDefaultPort()) {
             ssh.add("-p");
@@ -178,11 +193,15 @@ public final class TerminalLauncher {
         java.nio.file.Path output = null;
         try {
             output = java.nio.file.Files.createTempFile("cyberduck-terminal", ".log");
-            final Process process = new ProcessBuilder(command)
+            final ProcessBuilder builder = new ProcessBuilder(command)
                 .redirectErrorStream(true)
                 .redirectOutput(output.toFile())
-                .redirectInput(ProcessBuilder.Redirect.from(new java.io.File("/dev/null")))
-                .start();
+                .redirectInput(ProcessBuilder.Redirect.from(new java.io.File("/dev/null")));
+            if(isLocal(host)) {
+                // The terminals open their shell in the folder they are started in
+                builder.directory(new java.io.File(folder.getAbsolute()));
+            }
+            final Process process = builder.start();
             if(process.waitFor(2, java.util.concurrent.TimeUnit.SECONDS) && process.exitValue() != 0) {
                 final String said = StringUtils.defaultString(new String(java.nio.file.Files.readAllBytes(output), java.nio.charset.StandardCharsets.UTF_8)).strip();
                 return String.format("%s %s", String.format(Messages.get("The terminal {0} did not start.").replace("{0}", "%s"), command.get(0)),
