@@ -1541,6 +1541,8 @@ the module are 108 (1 skipped without a keyring) and every scenario named below 
 
   Fix: `FxCertificateStore` checks the chain with the trust manager of the runtime (`TrustManagerFactory` with no key store loads the `cacerts` the bundled runtime ships, 120 roots, including GTS Root R4) and the host name with `DefaultHostnameVerifier`. Only chains that fail are put to the user. Tests: the trust manager of the runtime has roots, a chain the runtime trusts is not asked about, a name that does not match is asked about, a self-signed certificate is asked about. Not done: an accepted self-signed certificate is remembered for the session only, so a NAS with its own certificate asks on every connection; the macOS version keeps it in the keychain.
 
+  Released as 9.6.1.46511 and confirmed on the desktop of the owner on 2026-11-13: the Google Drive login works and no certificate dialog appears.
+
 - [ ] **7.2 First release**
 
   After the Yes items of 6.12 are done and tested again on a desktop: a pre-release tag such as `v9.6.0-linux.1` (upstream version plus the Linux build). It is the first real run of the release workflow (4.6). Until upstream agrees on the name, the packages are described as a community build, "Cyberduck for Linux (unofficial)", because "Cyberduck" is a trademark of iterate GmbH.
