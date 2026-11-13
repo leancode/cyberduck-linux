@@ -721,6 +721,7 @@ public final class Smoke {
         check("host key was shown", counts.getOrDefault("hostkey", 0) == 1);
         check("password was asked", counts.getOrDefault("password", 0) == 1);
         check("upload folder is listed", names(browser).contains("upload"));
+        check("Open in Terminal is on in the File menu of an SFTP connection", !drawnDisabled(browser, "Open in Terminal"));
 
         // Navigate into the folder that can be written to
         doubleClick(browser, "upload");
@@ -806,6 +807,7 @@ public final class Smoke {
         // Disconnect and open the bookmark again. The host key is known now, the password is asked again.
         menu(browser, "Disconnect");
         await("disconnected", () -> onFx(() -> !browser.isMounted()));
+        check("Open in Terminal is off in the File menu after disconnecting", drawnDisabled(browser, "Open in Terminal"));
         final int hostkeys = counts.getOrDefault("hostkey", 0);
         onFx(() -> {
             bookmarks.getList().getSelectionModel().select(bookmark);
@@ -847,6 +849,46 @@ public final class Smoke {
 
     private static void menu(final BrowserController browser, final String name) throws Exception {
         menu(browser, "File", name);
+    }
+
+    /**
+     * Open the File menu as a click on it does and read the item as it is drawn, not as the model has it: a menu item
+     * fires even when it is disabled, so only the drawing shows what the user gets.
+     *
+     * @return True when the item is drawn disabled
+     */
+    private static boolean drawnDisabled(final BrowserController browser, final String name) throws Exception {
+        final javafx.scene.control.Menu file = browser.getMenuBar().getMenus().get(0);
+        onFx(() -> {
+            file.show();
+            return null;
+        });
+        try {
+            await(String.format("%s drawn in the File menu", name), () -> onFx(() -> null != drawnItem(name)));
+            return onFx(() -> drawnItem(name).getPseudoClassStates().contains(javafx.css.PseudoClass.getPseudoClass("disabled")));
+        }
+        finally {
+            onFx(() -> {
+                file.hide();
+                return null;
+            });
+        }
+    }
+
+    /**
+     * @return The node of the item in the menu that is showing, or null
+     */
+    private static Node drawnItem(final String name) {
+        for(Window window : Window.getWindows()) {
+            if(window instanceof javafx.scene.control.ContextMenu popup && popup.isShowing() && null != popup.getScene()) {
+                for(Node node : popup.getScene().getRoot().lookupAll(".menu-item")) {
+                    if(node.lookup(".label") instanceof javafx.scene.control.Label label && name.equals(label.getText())) {
+                        return node;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private static void menu(final BrowserController browser, final String menu, final String name) throws Exception {
@@ -1081,6 +1123,7 @@ public final class Smoke {
             return null;
         });
         awaitRendered(browser, directory);
+        check("Open in Terminal is on in the File menu of the local filesystem", !drawnDisabled(browser, "Open in Terminal"));
         // The row of the open connection is filled, and its menu offers to close the connection
         await("the open bookmark is filled", () -> onFx(() -> bookmarkRow(controller, bookmark).getStyle().contains("-fx-selection-bar")));
         check("the menu of the open bookmark says Disconnect", onFx(() -> {

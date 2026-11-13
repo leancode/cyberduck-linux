@@ -639,9 +639,10 @@ public class BrowserController extends FxController {
         final MenuItem terminalItem = this.item(Messages.get("Open in Terminal"), this::openTerminal);
         // Not Ctrl+Alt+T, which the desktops take for their own terminal before the application sees it
         terminalItem.setAccelerator(KeyCombination.keyCombination("Shortcut+Shift+T"));
-        // Only servers reached with SSH have a shell to open
-        terminalItem.disableProperty().bind(Bindings.createBooleanBinding(
-            () -> null == rendered || !TerminalLauncher.isSupported(pool.getHost()), renderedProperty));
+        // Only servers reached with SSH and the local filesystem have a shell to open. Set when the folder that is
+        // shown changes and again when the menu opens, as the context menus do
+        terminalItem.setDisable(true);
+        renderedProperty.addListener((observable, previous, directory) -> terminalItem.setDisable(!this.isTerminalSupported()));
         final MenuItem cutItem = this.item(Messages.get("Cut"), this::cutFiles);
         cutItem.setAccelerator(KeyCombination.keyCombination("Shortcut+X"));
         cutItem.disableProperty().bind(table.getSelectionModel().selectedItemProperty().isNull());
@@ -694,8 +695,10 @@ public class BrowserController extends FxController {
         final MenuItem quickItem = this.item(Messages.get("Quick Connect"), () -> quick.requestFocus());
         quickItem.setAccelerator(KeyCombination.keyCombination("Shortcut+K"));
         final String website = preferences.getProperty("website.help");
+        final Menu fileMenu = new Menu(Messages.get("File"), null, newBrowser, open, quickItem, disconnect, new SeparatorMenuItem(), newFolderItem, newFileItem, new SeparatorMenuItem(), downloadToItem, downloadAsItem, new SeparatorMenuItem(), openWeb, terminalItem, new SeparatorMenuItem(), edit, compareItem, duplicate, synchronize, new SeparatorMenuItem(), createVault, lockVault, new SeparatorMenuItem(), info, preferencesItem, new SeparatorMenuItem(), closeWindow, quit);
+        fileMenu.setOnShowing(event -> terminalItem.setDisable(!this.isTerminalSupported()));
         menu = new MenuBar(
-            new Menu(Messages.get("File"), null, newBrowser, open, quickItem, disconnect, new SeparatorMenuItem(), newFolderItem, newFileItem, new SeparatorMenuItem(), downloadToItem, downloadAsItem, new SeparatorMenuItem(), openWeb, terminalItem, new SeparatorMenuItem(), edit, compareItem, duplicate, synchronize, new SeparatorMenuItem(), createVault, lockVault, new SeparatorMenuItem(), info, preferencesItem, new SeparatorMenuItem(), closeWindow, quit),
+            fileMenu,
             new Menu(Messages.get("Edit"), null, cutItem, copyItem, pasteItem, new SeparatorMenuItem(), copyUrlItem, selectAll),
             new Menu(Messages.get("View"), null, hidden, showLog, refreshItem, findItem),
             new Menu(Messages.get("Go"), null, backItem, forwardItem, upItem, goTo),
@@ -1548,10 +1551,17 @@ public class BrowserController extends FxController {
     }
 
     /**
+     * @return True when a terminal can be opened in the folder that is shown
+     */
+    boolean isTerminalSupported() {
+        return this.isMounted() && null != workdir && TerminalLauncher.isSupported(pool.getHost());
+    }
+
+    /**
      * Open a terminal with a shell on the server in the folder that is shown or the selected folder
      */
     void openTerminal() {
-        if(!this.isMounted() || null == workdir || !TerminalLauncher.isSupported(pool.getHost())) {
+        if(!this.isTerminalSupported()) {
             return;
         }
         final Path selected = table.getSelectionModel().getSelectedItem();
