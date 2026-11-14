@@ -161,6 +161,12 @@ public class LinuxApplicationPreferences extends DefaultPreferences {
         this.setDefault("ssh.authentication.publickey.default.rsa", "~/.ssh/id_ed25519");
         this.setDefault("ssh.authentication.publickey.default.dsa", "~/.ssh/id_rsa");
         this.setDefault("connection.ssl.securerandom.algorithm", "NativePRNGNonBlocking");
+        // Sockets are closed with SO_LINGER, so that the runtime bounds its wait for the TLS record lock when it
+        // sends close_notify. With linger set, close() also waits until the peer acknowledges the last bytes, or the
+        // timeout passes. The peer of a connection that has sat idle for hours is gone and never answers, so with the
+        // default of 30 seconds every pooled connection of a Google Drive session cost half a minute on disconnect.
+        // One second is many round trips on a live connection and a short wait on a dead one.
+        this.setDefault("connection.socket.linger.timeout", String.valueOf(1));
     }
 
     @Override

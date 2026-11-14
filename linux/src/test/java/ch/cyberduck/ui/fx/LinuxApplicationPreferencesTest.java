@@ -108,6 +108,9 @@ public class LinuxApplicationPreferencesTest {
         assertTrue(preferences.getBoolean("ssh.authentication.publickey.default.enable"));
         assertEquals("~/.ssh/id_ed25519", preferences.getProperty("ssh.authentication.publickey.default.rsa"));
         assertEquals("~/.ssh/id_rsa", preferences.getProperty("ssh.authentication.publickey.default.dsa"));
+        // Closing a socket whose peer is gone waits for the linger timeout, not half a minute
+        assertTrue(preferences.getBoolean("connection.socket.linger"));
+        assertEquals(1, preferences.getInteger("connection.socket.linger.timeout"));
         // A server without a key of its own gets the default key that exists
         final java.io.File key = folder.newFile("id_ed25519");
         preferences.setProperty("ssh.authentication.publickey.default.rsa", key.getAbsolutePath());
