@@ -17,6 +17,7 @@ package ch.cyberduck.core.sftp;
 
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.containers.wait.strategy.WaitAllStrategy;
 import org.testcontainers.images.builder.ImageFromDockerfile;
 import org.testcontainers.utility.MountableFile;
 
@@ -29,15 +30,7 @@ import java.util.function.Supplier;
  * on first use and shared for the lifetime of the JVM.
  */
 public enum SFTPTestServer {
-    OPENSSH("/config", 2222, () -> new GenericContainer<>(new ImageFromDockerfile("cyberduck-openssh-sftp", false)
-            .withFileFromClasspath("Dockerfile", "openssh/Dockerfile"))
-            .withEnv("PUID", "1000")
-            .withEnv("PGID", "1000")
-            .withEnv("PASSWORD_ACCESS", "true")
-            .withEnv("USER_NAME", SFTPTestServer.USER)
-            .withEnv("USER_PASSWORD", SFTPTestServer.PASSWORD)
-            .withExposedPorts(2222)
-            .waitingFor(Wait.forLogMessage(".*\\[ls\\.io-init\\] done.*", 1).withStartupTimeout(Duration.ofMinutes(2)))),
+    OPENSSH("/config", 2222, SFTPTestServer::openssh),
     PROFTPD("/home/test", 2222, () -> new GenericContainer<>(new ImageFromDockerfile("cyberduck-proftpd-sftp", false)
             .withFileFromPath("Dockerfile", Paths.get("src/test/resources/proftpd/Dockerfile"))
             .withFileFromPath("proftpd.conf", Paths.get("src/test/resources/proftpd/proftpd.conf")))
@@ -47,12 +40,36 @@ public enum SFTPTestServer {
             .withFileFromClasspath("Dockerfile", "sftpgo/Dockerfile"))
             .withCopyToContainer(MountableFile.forClasspathResource("sftpgo/data.json", 0644), "/etc/sftpgo/data.json")
             .withEnv("SFTPGO_LOADDATA_FROM", "/etc/sftpgo/data.json")
+            .withCopyToContainer(MountableFile.forClasspathResource("certificate/ca.pub", 0644), "/etc/sftpgo/ca.pub")
             .withEnv("SFTPGO_LOADDATA_MODE", "1")
+            .withEnv("SFTPGO_SFTPD__TRUSTED_USER_CA_KEYS", "/etc/sftpgo/ca.pub")
             .withExposedPorts(2022)
             .waitingFor(Wait.forLogMessage(".*server listener registered, address: \\[::\\]:2022.*", 1).withStartupTimeout(Duration.ofMinutes(2))));
 
     public static final String USER = "test";
     public static final String PASSWORD = "test";
+
+    /**
+     * @return New OpenSSH container trusting the CA in <code>certificate/ca.pub</code> for user certificates. Add
+     * further server configuration by copying files to <code>/config/sshd/sshd_config.d/</code>.
+     */
+    public static GenericContainer<?> openssh() {
+        return new GenericContainer<>(new ImageFromDockerfile("cyberduck-openssh-sftp", false)
+                .withFileFromClasspath("Dockerfile", "openssh/Dockerfile"))
+                .withEnv("PUID", "1000")
+                .withEnv("PGID", "1000")
+                .withEnv("PASSWORD_ACCESS", "true")
+                .withEnv("USER_NAME", USER)
+                .withEnv("USER_PASSWORD", PASSWORD)
+                .withCopyToContainer(MountableFile.forClasspathResource("certificate/ca.pub", 0644), "/config/sshd/ca.pub")
+                .withCopyToContainer(MountableFile.forClasspathResource("certificate/sshd.conf", 0644), "/config/sshd/sshd_config.d/certificate.conf")
+                .withExposedPorts(2222)
+                .waitingFor(new WaitAllStrategy()
+                        .withStrategy(Wait.forLogMessage(".*\\[ls\\.io-init\\] done.*", 1))
+                        // Init is done before the sshd service is started
+                        .withStrategy(Wait.forListeningPort())
+                        .withStartupTimeout(Duration.ofMinutes(2)));
+    }
 
     private final String home;
     private final int port;
@@ -75,6 +92,8 @@ public enum SFTPTestServer {
     public synchronized GenericContainer<?> container() {
         if(null == container) {
             container = factory.get();
+            // Include server output in test log to diagnose connection failures
+            container.withLogConsumer(f -> System.out.print(this.name() + " " + f.getUtf8String()));
             container.start();
             final GenericContainer<?> started = container;
             Runtime.getRuntime().addShutdownHook(new Thread(started::stop));

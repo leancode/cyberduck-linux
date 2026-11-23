@@ -168,7 +168,7 @@ public class FTPSession extends SSLSession<FTPClient> {
             return client;
         }
         catch(FTPConnectionClosedException e) {
-            if(client != null && FTPReply.SERVICE_NOT_AVAILABLE == client.getReplyCode()) {
+            if(FTPReply.SERVICE_NOT_AVAILABLE == client.getReplyCode()) {
                 // Server rejected the connection in place of the greeting. Preserve the reply text
                 throw new FTPExceptionMappingService().map(new FTPException(client.getReplyCode(), StringUtils.trim(client.getReplyString())));
             }
@@ -301,7 +301,7 @@ public class FTPSession extends SSLSession<FTPClient> {
                     EnumSet.of(Read.Flags.offset) : EnumSet.noneOf(Read.Flags.class));
         }
         if(type == Upload.class) {
-            return (T) new FTPUploadFeature(this);
+            return (T) new FTPUploadFeature();
         }
         if(type == Write.class) {
             return (T) new FTPWriteFeature(this);
