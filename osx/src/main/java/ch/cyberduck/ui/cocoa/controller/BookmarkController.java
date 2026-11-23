@@ -119,6 +119,8 @@ public abstract class BookmarkController extends SheetController implements NSTa
     @Outlet
     private NSTokenField labelsField;
     @Outlet
+    private NSTextView commentField;
+    @Outlet
     private NSPopUpButton certificatePopup;
     @Outlet
     private NSPopUpButton timezonePopup;
@@ -145,8 +147,10 @@ public abstract class BookmarkController extends SheetController implements NSTa
 
     @Override
     public void loadBundle() {
-        if(!NSBundle.loadNibNamed("Bookmark", this.id())) {
-            throw new FactoryException(String.format("Failure loading %s.xib", "Bookmark"));
+        if(!awaked) {
+            if(!NSBundle.loadNibNamed("Bookmark", this.id())) {
+                throw new FactoryException(String.format("Failure loading %s.xib", "Bookmark"));
+            }
         }
         super.loadBundle();
     }
@@ -290,6 +294,10 @@ public abstract class BookmarkController extends SheetController implements NSTa
             log.debug("Protocol selection changed to {}", selected);
             bookmark.setProtocol(selected);
             bookmark.setPort(HostnameConfiguratorFactory.get(selected).getPort(bookmark.getHostname()));
+            if(!selected.isAnonymousConfigurable() && bookmark.getCredentials().isAnonymousLogin()) {
+                // Anonymous login not supported by selected protocol
+                this.resetAnonymousLogin();
+            }
             bookmark.setCredentials(CredentialsConfiguratorFactory.get(selected).configure(bookmark));
             options.configure(selected);
             validator.configure(selected);
@@ -340,6 +348,28 @@ public abstract class BookmarkController extends SheetController implements NSTa
             labels.add(next.toString());
         }
         bookmark.setLabels(labels);
+        this.update();
+    }
+
+    @Outlet
+    public void setCommentField(final NSTextView field) {
+        this.commentField = field;
+        this.commentField.setFont(NSFont.userFixedPitchFontOfSize(11f));
+        this.notificationCenter.addObserver(this.id(),
+                Foundation.selector("commentInputDidChange:"),
+                NSText.TextDidChangeNotification,
+                field.id());
+        this.addObserver(bookmark -> {
+            // Do not replace unchanged text to preserve the selection while typing
+            if(!StringUtils.defaultString(bookmark.getComment()).equals(commentField.string())) {
+                updateField(commentField, bookmark.getComment());
+            }
+        });
+    }
+
+    @Action
+    public void commentInputDidChange(final NSNotification sender) {
+        bookmark.setComment(commentField.textStorage().string());
         this.update();
     }
 
@@ -511,16 +541,23 @@ public abstract class BookmarkController extends SheetController implements NSTa
             bookmark.getCredentials().setPassword(HostPreferencesFactory.get(bookmark).getProperty("connection.login.anon.pass"));
         }
         if(sender.state() == NSCell.NSOffState) {
-            if(HostPreferencesFactory.get(bookmark).getProperty("connection.login.name").equals(
-                    HostPreferencesFactory.get(bookmark).getProperty("connection.login.anon.name"))) {
-                bookmark.getCredentials().setUsername(StringUtils.EMPTY);
-            }
-            else {
-                bookmark.getCredentials().setUsername(HostPreferencesFactory.get(bookmark).getProperty("connection.login.name"));
-            }
-            bookmark.getCredentials().setPassword(null);
+            this.resetAnonymousLogin();
         }
         this.update();
+    }
+
+    /**
+     * Replace anonymous credentials with default username and no password
+     */
+    private void resetAnonymousLogin() {
+        if(HostPreferencesFactory.get(bookmark).getProperty("connection.login.name").equals(
+                HostPreferencesFactory.get(bookmark).getProperty("connection.login.anon.name"))) {
+            bookmark.getCredentials().setUsername(StringUtils.EMPTY);
+        }
+        else {
+            bookmark.getCredentials().setUsername(HostPreferencesFactory.get(bookmark).getProperty("connection.login.name"));
+        }
+        bookmark.getCredentials().setPassword(null);
     }
 
     @Outlet
